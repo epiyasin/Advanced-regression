@@ -480,9 +480,8 @@ table(y) # 0 = excellent response, 1 = lesser response
 x = as.matrix(data_bc$x) 
 dim(x)
 
-# diagonal discriminant analysis 
-
-DDA_ranking = sda.ranking(x, y, diagonal = TRUE) # ranking features using sda function 
+# ranking features using sda function
+DDA_ranking = sda.ranking(x, y, diagonal = TRUE)  
 
 DDA_variables = sum(DDA_ranking[,"lfdr"]<0.2)
 # factors passing <0.2 threshold and IDs
@@ -493,7 +492,8 @@ selected_variables = DDA_ranking[,"idx"][1:DDA_variables] # gene indexing
 
 DDA_rule = sda(x[, selected_variables, drop = FALSE], y, diagonal = TRUE)
 
-DDA_predicted = predict(DDA_rule, x[, selected_variables, drop = FALSE], verbose = FALSE)
+DDA_predicted = predict(DDA_rule, x[, selected_variables, drop = FALSE],
+                        verbose = FALSE)
 
 # sensitivity (TPR)/specificity (TNR) based on confusion matrix
 
@@ -536,7 +536,8 @@ selected_variables = LDA_ranking[,"idx"][1:LDA_variables] # gene indexing
 
 LDA_rule = sda(x[, selected_variables, drop = FALSE], y, diagonal = FALSE)
 
-LDA_predicted = predict(LDA_rule, x[, selected_variables, drop = FALSE], verbose = FALSE)
+LDA_predicted = predict(LDA_rule, x[, selected_variables, drop = FALSE],
+                        verbose = FALSE)
 
 # sensitivity (TPR)/specificity (TNR) based on confusion matrix
 
@@ -702,7 +703,8 @@ B=20
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # dda
-DDA_cv = crossval(prediction_function, X = x, Y = y, K, B, method = "dda", verbose = FALSE)
+DDA_cv = crossval(prediction_function, X = x, Y = y, K, B,
+                  method = "dda", verbose = FALSE)
 DDA_cv$stat
 TPR[1] = DDA_cv$stat[2]/(DDA_cv$stat[2]+DDA_cv$stat[4])
 TNR[1] = DDA_cv$stat[3]/(DDA_cv$stat[1]+DDA_cv$stat[3])
@@ -713,7 +715,8 @@ TNR[1] = DDA_cv$stat[3]/(DDA_cv$stat[1]+DDA_cv$stat[3])
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # lda
-LDA_cv = crossval(prediction_function, X = x, Y = y, K, B, method = "lda", verbose = FALSE)
+LDA_cv = crossval(prediction_function, X = x, Y = y, K, B,
+                  method = "lda", verbose = FALSE)
 LDA_cv$stat
 TPR[2] = LDA_cv$stat[2]/(LDA_cv$stat[2]+LDA_cv$stat[4])
 TNR[2] = LDA_cv$stat[3]/(LDA_cv$stat[1]+LDA_cv$stat[3])
@@ -723,7 +726,8 @@ TNR[2] = LDA_cv$stat[3]/(LDA_cv$stat[1]+LDA_cv$stat[3])
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # svm
-SVM_cv = crossval(prediction_function, X = x, Y = y, K, B, method = "svm", verbose = FALSE)
+SVM_cv = crossval(prediction_function, X = x, Y = y, K, B,
+                  method = "svm", verbose = FALSE)
 SVM_cv$stat
 TPR[3] = SVM_cv$stat[2]/(SVM_cv$stat[2]+SVM_cv$stat[4])
 TNR[3] = SVM_cv$stat[3]/(SVM_cv$stat[1]+SVM_cv$stat[3])
@@ -734,7 +738,8 @@ TNR[3] = SVM_cv$stat[3]/(SVM_cv$stat[1]+SVM_cv$stat[3])
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # randomForest
-randomforest_cv = crossval(prediction_function, X = x, Y = y, K, B, method = "randomforest", verbose = FALSE)
+randomforest_cv = crossval(prediction_function, X = x, Y = y, K, B,
+                           method = "randomforest", verbose = FALSE)
 randomforest_cv$stat
 TPR[4] = randomforest_cv$stat[2]/(randomforest_cv$stat[2]+randomforest_cv$stat[4])
 TNR[4] = randomforest_cv$stat[3]/(randomforest_cv$stat[1]+randomforest_cv$stat[3])
@@ -793,7 +798,8 @@ cv.out.rf$stat.se
 # compare random forest with regularised regression prediciton performance
 
 library(glmnet)
-predfun.glmnet = function(train.x, train.y, test.x, test.y, lambda = lambda, alpha = alpha){
+predfun.glmnet = function(train.x, train.y, test.x, test.y,
+                          lambda = lambda, alpha = alpha){
   # fit glmnet prediction rule
   glmnet.fit = glmnet(x = train.x, y = train.y, lambda = lambda, alpha = alpha)
   # predict the new observation based on the test data and the prediction rule
@@ -826,10 +832,13 @@ cv.out.lasso = crossval(predfun.glmnet, x, y, lambda = lasso.cv$lambda.1se,
                         alpha = 1, K = 5, B = 10, verbose = FALSE)
 cv.out.enet = crossval(predfun.glmnet, x, y, lambda = elasticnet.cv$lambda.1se,
                        alpha = elasticnet.cv$alpha, K = 5, B = 10, verbose = FALSE)
-table.out = rbind(c(cv.out.ridge$stat, cv.out.ridge$stat.se), c(cv.out.lasso$stat, cv.out.lasso$stat.se),
-                  c(cv.out.enet$stat, cv.out.enet$stat.se), c(cv.out.rf10$stat, cv.out.rf10$stat.se), 
-                  c(cv.out.rf100$stat, rownames(table.out) = c("ridge", "lasso", "elastic net", "rf 10", "rf 100"),
-colnames(table.out)=c("mse", "se")))
+table.out = rbind(c(cv.out.ridge$stat, cv.out.ridge$stat.se),
+                  c(cv.out.lasso$stat, cv.out.lasso$stat.se),
+                  c(cv.out.enet$stat, cv.out.enet$stat.se),
+                  c(cv.out.rf10$stat, cv.out.rf10$stat.se), 
+                  c(cv.out.rf100$stat, rownames(table.out)
+                    = c("ridge", "lasso", "elastic net", "rf 10", "rf 100"),
+                    colnames(table.out)=c("mse", "se")))
 
 # predict age of new mice using lasso model based on nitrogendioxide exposure
 
