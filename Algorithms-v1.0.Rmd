@@ -22,11 +22,11 @@ library(e1071)
 
 ```
 
-# Part I
+# Section 1
 
-## I - Linear analysis
+## 1.1 - Linear analysis
 
-### I - Linear regression
+### 1.1.1 - Linear regression
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
 set.seed(1)
@@ -49,7 +49,7 @@ x1 =  cbind(rep(1,nrow(diabetes$x)), x$sex, x$age, x$bmi, x$glu, x$map, x$ltg)
 # nrow() - number of rows in structure
 ```
 
-### II - OLS regression
+### 1.1.2 - OLS regression
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 OLS = solve(t(x1)%*%x1)%*%t(x1)%*%y # OLS regression
 
@@ -66,9 +66,9 @@ COV = solve(cov(x2))%*%cov(x2,y) # sample covariance based estimate
 # %*% - matrix multiplication
 ```
 
-## II - General Linear Prediction
+## 1.2 - General Linear Prediction
 
-### I - Linear Prediction
+### 1.2.1 - Linear Prediction
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
@@ -89,7 +89,7 @@ squared_difference = (linear_prediction-y_new)^2
 # squared difference
 ```
 
-### I - Logistic Prediction
+### 1.2.2 - Logistic Prediction
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
@@ -102,7 +102,7 @@ logistic_regression = glm(y_binary~sex+age+bmi+glu+map+ltg,
 
 # family = binomial transforms generalised function to be logistic
 
-## Part I - Logistic prediction
+## Section I - Logistic prediction
 
 ybin_train = y_binary[1:300] # initiating training variable as binary (i.e y>x)
 
@@ -120,7 +120,7 @@ Inverse logit function $(logit^{-1} (eta) = exp(eta)/(exp(eta) + 1))$ to transfo
 logistic_prediction = (exp(eta)/(exp(eta)+1)) # inverse logit link
 ```
 
-## III - Linear mixed model
+## 1.3 - Linear mixed model
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
 load("E:/Imperial College London/Term 2/AR/Week1/exam.London")
@@ -175,9 +175,9 @@ anova(random_intercept, random_intercept_covariates)
 
 
 
-# Part II
+# Section 2
 
-## I - Large data analysis
+## 2.1 - Large data analysis
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
@@ -224,7 +224,7 @@ head(sites_ordered, 10) # showing top 10 sites ordered by decreasing values
 ```
 
 
-## II - Multiple testing adjustment
+## 2.2 - Multiple testing adjustment
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 library(qvalue)
@@ -233,7 +233,7 @@ hist(p_vec, breaks=50) # plots distribution of p-values
 
 ```
 
-### I - Bonferroni correction 
+### 2.2.1 - Bonferroni correction 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
 # bonferroni correction with p-values below 0.05
@@ -243,7 +243,7 @@ table(bonferroni<0.05)
 output[which(bonferroni<0.05),]
 ```
 
-### II - Benjamini-Hochberg FDR correction
+### 2.2.2 - Benjamini-Hochberg FDR correction
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 # Benjamini-Hochberg FDR correction with p-values below 0.05 
 # most conservative FDR
@@ -253,7 +253,7 @@ output[which(bh<0.05),]
 
 ```
 
-### III - q-value FDR correction
+### 2.2.3 - q-value FDR correction
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 # q-value FDR correction with p-values below 0.05
 qobj = qvalue(p=p_vec)
@@ -264,7 +264,7 @@ output[which(qvalues<0.05),]
 qobj$pi0 # extract Null variable
 ```
 
-### IV - Local FDR correction
+### 2.2.4 - Local FDR correction
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 # local FDR correction with p-values below 0.05
 # leas conservative FDR
@@ -276,11 +276,11 @@ lfdr_out$param # extracts censored and eta values
 
 ```
 
-# Part III
+# Section 3
 
-## I - Penalised regression
+## 3.1 - Penalised regression
 
-### I - Lasso regression
+### 3.1.1 - Lasso regression
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
 set.seed(694208008135)
@@ -346,7 +346,7 @@ Figure 2 shows the bias-variance trade-off of the test error. At first the cross
 
 Figure 3 shows the model complexity. With strong regularisation few variables are included into the model. When reducing the regularisation, the model size increases. The model with the lambda that miminises the MSE includes 301 variables, while the sparsest model within 1 standard error includes 158 variables.*
 
-### II - Ridge regression
+### 3.1.2 - Ridge regression
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
 # ridge cross validation optimising the mean squared error
@@ -371,7 +371,7 @@ sum(abs(lasso_1se$beta)>0) # variables included in model
 # all regression coefficients are unequal to zero and thus included into the model.
 ```
 
-### III - Elastic-net regression
+### 3.1.3 - Elastic-net regression
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
 # elastic regression - dataframe structure to analyse min and 1se lambad at alpha fit 
@@ -387,7 +387,7 @@ elasticnet = search[search$cvm == min(search$cvm), ]
 ```
 
 
-## II - Generalised Prediction rule
+## 3.2 - Generalised Prediction rule
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
@@ -424,7 +424,7 @@ table.out
 ```
 
 
-## III - Shrinkage t-score
+## 3.3 - Shrinkage t-score
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
@@ -462,11 +462,11 @@ sum(FDR_shrinkage$lfdr<0.2)
 ```
 
 
-# Part IV
+# Section 4
 
-## I - Predicting treatment (classification)
+## 4.1 - Predicting treatment (classification)
 
-### I - Diagonal discriminant analysis
+### 4.1.1 - Diagonal discriminant analysis
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 
 load("E:/Imperial College London/Term 2/AR/Week3/JAMA2011_breast_cancer") 
@@ -520,7 +520,7 @@ ROC$auc # AUC
 # of the receiver operating characteristic (ROC)
 ```
 
-### II - Linear discriminant analysis
+### 4.1.2 - Linear discriminant analysis
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 
 # linear discriminant analysis 
@@ -564,7 +564,7 @@ ROC$auc # AUC
 
 ```
 
-### III - Support vector machine regression
+### 4.1.3 - Support vector machine regression
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # support vector machine
 
@@ -602,7 +602,7 @@ ROC$auc # AUC
 
 ```
 
-### IV - Random forest regression
+### 4.1.4 - Random forest regression
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # random forest
 
@@ -627,7 +627,7 @@ roc.out$auc # AUC
 
 CAUTION: It is NOT good practise to evaluate a prediction rule on the same dataset that was used to establish the prediction rule, results may be misleading due to overfitting.
 
-## II - Evaluating prediction performance using cross-validation
+## 4.2 - Evaluating prediction performance using cross-validation
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 
@@ -698,7 +698,7 @@ K=5
 B=20
 ```
 
-### I - Evaluating prediction performance of DDA cross-validation
+### 4.2.1 - Evaluating prediction performance of DDA cross-validation
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # dda
@@ -709,7 +709,7 @@ TNR[1] = DDA_cv$stat[3]/(DDA_cv$stat[1]+DDA_cv$stat[3])
 
 ```
 
-### II - Evaluating prediction performance of LDA cross-validation
+### 4.2.2 - Evaluating prediction performance of LDA cross-validation
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # lda
@@ -719,7 +719,7 @@ TPR[2] = LDA_cv$stat[2]/(LDA_cv$stat[2]+LDA_cv$stat[4])
 TNR[2] = LDA_cv$stat[3]/(LDA_cv$stat[1]+LDA_cv$stat[3])
 ```
 
-### III - Evaluating prediction performance of SVM cross-validation
+### 4.2.3 - Evaluating prediction performance of SVM cross-validation
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # svm
@@ -730,7 +730,7 @@ TNR[3] = SVM_cv$stat[3]/(SVM_cv$stat[1]+SVM_cv$stat[3])
 
 ```
 
-### IV - Evaluating prediction performance of random forest cross-validation
+### 4.2.4 - Evaluating prediction performance of random forest cross-validation
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 # randomForest
@@ -746,9 +746,9 @@ TPR
 TNR
 ```
 
-# Part V
+# Section 5
 
-## I - Non-parametric prediction using random forests
+## 5.1 - Non-parametric prediction using random forests
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 
