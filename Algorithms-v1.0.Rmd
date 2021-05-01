@@ -351,7 +351,7 @@ Figure 3 shows the model complexity. With strong regularisation few variables ar
 
 # ridge cross validation optimising the mean squared error
   
-ridge_cv = cv.glmnet(x,y,family="gaussian",alpha==, type.measure="mse")
+ridge_cv = cv.glmnet(x,y,family="gaussian",alpha=0, type.measure="mse")
 ridge_cv$lambda.min # extracts the lambda that minimises the mse
 ridge_cv$lambda.1se # extracts the lambda that is the largest lambda 
 # (smallest model) that has a mse
@@ -383,7 +383,7 @@ search = foreach(i = a, .combine = rbind)%do%{
              lambda.1se = elasticnet_cv$lambda.1se,
              alpha = i)
 }
-elasticnet = search[search$cvm == min(search$cvm), ]
+elasticnet_cv = search[search$cvm == min(search$cvm), ]
 ```
 
 
@@ -406,12 +406,12 @@ prediction_rule = function(train.x, train.y, test.x, test.y,
 
 # rdige with K-fol cross-validation with B segments (i.e for lambda = 1se)
 
-ridge_cv =  crossval(prediction_rule, x, y, lambda=ridge.cv$lambda.1se, alpha=0,
+ridge_cvk =  crossval(prediction_rule, x, y, lambda=ridge_cv$lambda.1se, alpha=0,
                          K=5, B=20, verbose=FALSE) 
-lasso_cv =  crossval(prediction_rule, x, y, lambda=lasso.cv$lambda.1se, alpha=1, 
+lasso_cvk =  crossval(prediction_rule, x, y, lambda=lasso_cv$lambda.1se, alpha=1, 
                          K=5, B=20, verbose=FALSE) 
-elasticnet_cv  =  crossval(prediction_rule, x, y, lambda=elasticnet.cv$lambda.1se, 
-                         alpha=elasticnet.cv$alpha, K=5, B=20, verbose=FALSE) 
+elasticnet_cvk  =  crossval(prediction_rule, x, y, lambda=elasticnet_cv$lambda.1se, 
+                         alpha=elasticnet_cv$alpha, K=5, B=20, verbose=FALSE) 
 
 #table for comparison of mse and se
 
@@ -757,147 +757,81 @@ TNR
 
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 
-rf.out = randomForest(x = x, y = y, ntree = 100, importance = TRUE)
-#importance = TRUE assesses which variables are important
+load("E:/Imperial College London/Term 2/AR/Week3/data_epigenetic_clock_control") 
 
+y = control_mice$y_control
+x = control_mice$x_control
+dim(x)
 
-# rank variables according to their importance and plot top 10
-importance = rf.out$importance
-importance[order(importance[,2], decreasing =TRUE),] [1:10,]
-varImpPlot(rf.out)
+# build random forest with 100 trees
 
-# bagging with randomForest function
-# mtry= how many predictors of x should be considered to split the tree, which is a bagging approach
-bagging.out = randomForest(x = x, y = y, ntree = 100, importance =TRUE, mtry = ncol(x))
+random_forest = randomForest(x = x, y = y, ntree = 100, importance = TRUE)
 
-# # prediction function for random forest
-predfun.rf = function(train.x, train.y, test.x, test.y, ntree){
-  # fit the model and build a prediction rule
-  rf.fit = randomForest(x = train.x, y = train.y, ntree = ntree)
-  # predict the new observation based on the test data and the prediction rule
-  ynew = predict(rf.fit , newdata = test.x)
-  # compute squared error risk (MSE)
-  out = mean( (ynew - test.y)^2 )
-  return( out )
-}
-# ntree as open paramter: compare performance for different training length of rf algorithm
+importance = random_forest$importance # extract random forest importance
 
-# compare prediction performance ntree = 10, ntree = 100
-library(crossval)
-set.seed(14)
-# 10 trees
-cv.out.rf10 = crossval(predfun.rf, x, y, ntree = 10, K = 5, B = 10, verbose = FALSE)
-cv.out.rf10$stat
-cv.out.rg10$stat.se
+importance_order = importance[order(importance[,2], decreasing = TRUE),] [1:10,]
 
-# 100trees
-cv.out.rf100 = crossval(predfun.rf, x, y, ntree = 100, K = 5, B = 10, verbose = FALSE)
-cv.out.rf100$stat
-cv.out.rf$stat.se
+#  decreasing = TRUE - rank the top 10 most important values
 
-# compare random forest with regularised regression prediciton performance
+varImpPlot(random_forest) # visualise importance from random forest
 
-library(glmnet)
-predfun.glmnet = function(train.x, train.y, test.x, test.y,
-                          lambda = lambda, alpha = alpha){
-  # fit glmnet prediction rule
-  glmnet.fit = glmnet(x = train.x, y = train.y, lambda = lambda, alpha = alpha)
-  # predict the new observation based on the test data and the prediction rule
-  ynew = predict(glmnet.fit , newx = test.x)
-  # compute squared error risk (MSE)
-  out = mean( (ynew - test.y)^2 )
-  return( out )
+# bagging random forest
+bagging = randomForest(x, y, ntree = 100, importance = TRUE, mtry = ncol(x))
+
+# mtry = ncol(x) - predictors to split tree, ncol(x) indicates baggin
+
+# function to compare performance for different training lengths of random forest
+
+random_forest_prediction = function(train.x, train.y, test.x, test.y, ntree){
+
+	#fit the model and build a prediction rule
+	random_forest_fit = randomForest(train.x, train.y, ntree = ntree) 
+	#predict the new observation based on the test data and the prediction rule
+	random_forest_predicted = predict(random_forest_fit , test.x)
+	# compute squared error risk (MSE)
+	out = mean( (random_forest_predicted - test.y)^2 ) 
+	return( out )
 }
 
-# crossvalidation to tune the regularisation parameter
-library(foreach)
-set.seed(12)
-lasso.cv = cv.glmnet(x,y,family="gaussian",alpha = 1, type.measure="mse")
-set.seed(123)
-ridge.cv = cv.glmnet(x,y,family="gaussian",alpha = 0, type.measure="mse")
-set.seed(1234)
-a = seq(0.05, 0.95, 0.05)
-search = foreach(i = a, .combine = rbind)%do%{
-  cv = cv.glmnet(x,y,family = "gaussian", type.measure = "mse", alpha = i)
-  data.frame(cvm = cv$cvm[cv$lambda == cv$lambda.1se],
-             lambda.1se = cv$lambda.1se, alpha = i)
-}
-elasticnet.cv = search[search$cvm == min(search$cvm), ]
+# comparing prediction performance 
 
-# compare if random forest is better than lasso and elastic net
-set.seed(15)
-cv.out.ridge = crossval(predfun.glmnet, x, y, lambda = ridge.cv$lambda.1se,
-                        alpha = 0, K = 5, B = 10, verbose = FALSE)
-cv.out.lasso = crossval(predfun.glmnet, x, y, lambda = lasso.cv$lambda.1se,
-                        alpha = 1, K = 5, B = 10, verbose = FALSE)
-cv.out.enet = crossval(predfun.glmnet, x, y, lambda = elasticnet.cv$lambda.1se,
-                       alpha = elasticnet.cv$alpha, K = 5, B = 10, verbose = FALSE)
-table.out = rbind(c(cv.out.ridge$stat, cv.out.ridge$stat.se),
-                  c(cv.out.lasso$stat, cv.out.lasso$stat.se),
-                  c(cv.out.enet$stat, cv.out.enet$stat.se),
-                  c(cv.out.rf10$stat, cv.out.rf10$stat.se), 
-                  c(cv.out.rf100$stat, rownames(table.out)
-                    = c("ridge", "lasso", "elastic net", "rf 10", "rf 100"),
-                    colnames(table.out)=c("mse", "se")))
+# k-fold crossvalidation with B repetitions to evaluate prediction performance
 
-# predict age of new mice using lasso model based on nitrogendioxide exposure
+K=5
+B=10 # ideally 100-1000 repetitions
 
-# building the prediction rule
-lasso.cv.out = glmnet(x,y,family="gaussian",alpha = 1,lambda = lasso.cv$lambda.1se)
-# evaluating on the new data
-lasso.hat = predict(lasso.cv.out,newx = x.test, s = lasso.cv$lambda.1se)
+randomforest_cv_nt10 = crossval(random_forest_prediction, x, y, ntree = 10,
+                                K, B, verbose = FALSE)
 
-# predict age of new mice using ridge model
-# building the prediction rule
-ridge.cv.out = glmnet(x,y,family="gaussian",alpha = 0,lambda = ridge.cv$lambda.1se)
-# evaluating on the new data
-ridge.hat = predict(ridge.cv.out,newx = x.test, s = ridge.cv$lambda.1se)
+randomforest_cv_nt10$stat  
+randomforest_cv_nt10$stat.se 
 
-# predict age of new mice using elastic net
-# building the prediction rule
-enet.out = glmnet(x, y, family = "gaussian",
-                  lambda = elasticnet.cv$lambda.1se, alpha = elasticnet.cv$alpha)
-# evaluating on the new data
-enet.hat = predict(enet.out,newx = x.test,
-                   lambda = elasticnet.cv$lambda.1se, alpha = elasticnet.cv$alpha)
+randomforest_cv_nt100  =  crossval(random_forest_prediction, x, y, ntree=100,
+                                   K=5, B=10, verbose=FALSE)  
+randomforest_cv_nt100$stat  
+randomforest_cv_nt100$stat.se 
 
-# predict age of new mice using random forest model with ntree = 500 for a reliable prediction
-# building the prediction rule
-rf.out = randomForest(x = x, y = y, importance =TRUE, ntree = 500)
-# evaluating on the new data
-rf.hat = predict(rf.out,newdata = x.test)
+# It is recommended to use at least 500 or more trees.
 
-# hypothesis testing that NO2 exposure reduces the biological age of mice: t-test
-# random forest
-t.test(rf.hat~as.factor(exposed))
+# Random forest vs regularised regression - prediction performance
 
-# ridge
-t.test(ridge.hat~as.factor(exposed))
+table.out = rbind(c(ridge_cvk$stat, ridge_cvk$stat.se), c(lasso_cvk$stat, lasso_cvk$stat.se), 
+ c(elasticnet_cvk$stat, elasticnet_cvk$stat.se), c(randomforest_cv_nt10$stat, randomforest_cv_nt10$stat.se), c(randomforest_cv_nt100$stat, randomforest_cv_nt100$stat.se))
+rownames(table.out) = c("ridge", "lasso", "elastic net", "randomforest_cv_nt10", "randomforest_cv_nt100")
+colnames(table.out) = c("mse", "se")
+table.out
 
 
-# # fit decision tree to a predictor matrix with y.input, x.input
-# tree package
-tree.out = tree(y.input ~ x.input)
-plot(tree.out)
-text(tree.out)
 
-# prune tree using cross validation (FUN = prune.misclass for misclassification as criterion)
-set.seed(33)
-cv.out = cv.tree(tree.out, FUN = prune.misclass)
-cv.out
-
-# continue with model with smallest $size (here: best = 5)
-pruned.tree = prune.tree(tree.out, best = 5)
-plot(pruned.tree)
-text(pruned.tree)
-
-# fit a random forest to the data 
-rf.out = randomForest(y = y.input, x = x.input)
-varImpPlot(rf.out, main="")
 ```
 
+## 5.2 - Non-parametric prediction, multiple approaches
+
+```{r message = FALSE, warning = FALSE, eval = FALSE}
 
 
 
+
+```
 
 
