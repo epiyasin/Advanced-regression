@@ -126,6 +126,8 @@ logistic_prediction = (exp(eta)/(exp(eta)+1)) # inverse logit link
 load("E:/Imperial College London/Term 2/AR/Week1/exam.London")
 dim(exam) #returns the dimensions of the dataset
 
+(exam)
+
 # row x columns
 # 3935 observations
 # 10 covariates
@@ -235,7 +237,6 @@ hist(p_vec, breaks=50) # plots distribution of p-values
 
 ### 2.2.1 - Bonferroni correction 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
-
 # bonferroni correction with p-values below 0.05
 # most conservative
 bonferroni = p.adjust(p_vec, method="bonferroni")
@@ -359,13 +360,13 @@ ridge_cv$lambda.1se # extracts the lambda that is the largest lambda
 
 # lasso regression with lambda min
 
-lasso_min = glmnet(x,y,family="gaussian",alpha=0,lambda=ridge_cv$lambda.min)
-sum(abs(lasso_min$beta)>0) # variables included in model
+ridge_min = glmnet(x,y,family="gaussian",alpha=0,lambda=ridge_cv$lambda.min)
+sum(abs(ridge_min$beta)>0) # variables included in model
 
 # lasso regression with lambda 1se
 
-lasso_1se = glmnet(x,y,family="gaussian",alpha=0,lambda=ridge_cv$lambda.1se)
-sum(abs(lasso_1se$beta)>0) # variables included in model
+ridge_1se = glmnet(x,y,family="gaussian",alpha=0,lambda=ridge_cv$lambda.1se)
+sum(abs(ridge_1se$beta)>0) # variables included in model
 
 # Ridge regression does not perform variable selection,
 # all regression coefficients are unequal to zero and thus included into the model.
@@ -384,10 +385,16 @@ search = foreach(i = a, .combine = rbind)%do%{
              alpha = i)
 }
 elasticnet_cv = search[search$cvm == min(search$cvm), ]
+
+elasticnet_1se = glmnet(x, y, family = "gaussian",
+                        lambda = elasticnet.cv$lambda.1se,
+                        alpha = elasticnet.cv$alpha)
+
+sum(abs(elasticnet_1se$beta)>0)
 ```
 
 
-## 3.2 - Generalised Prediction rule
+## 3.2 - Generalised Prediction rule (intra-model cross-validation)
 
 ```{r message=FALSE, warning=FALSE, eval=FALSE}
 
@@ -524,7 +531,7 @@ ROC$auc # AUC
 ```{r message = FALSE, warning = FALSE, eval = FALSE}
 
 # linear discriminant analysis 
-
+?sda
 LDA_ranking = sda.ranking(x, y, diagonal = FALSE) # ranking features using sda function 
 
 LDA_variables = sum(LDA_ranking[,"lfdr"]<0.2)
@@ -571,7 +578,7 @@ ROC$auc # AUC
 
 SVM_rule = svm(x,y) # build svm train rule
 
-SVM_predicted = predict(SVM_rule, x, decision.values = FALSE) # build prediction rule
+SVM_predicted = predict(SVM_rule, x, decision.values = T) # build prediction rule
 
 SVM_predicted_DV = attr(SVM_predicted, "decision.values")
 
@@ -613,6 +620,7 @@ random_forest_predicted_probability = predict(random_forest, x, type="prob")
 cM=confusionMatrix(as.character(y),
                    as.character(random_forest_predicted),
                    negative="0")
+?confusionMatrix
 
 TPR = cM[2]/(cM[2]+cM[4])
 
@@ -646,13 +654,16 @@ prediction_function = function(Xtrain, Ytrain, Xtest, Ytest, method)
       
     }
     
-    DA_ranking = sda.ranking(Xtrain, Ytrain, verbose=FALSE, diagonal=diagonal, fdr=TRUE)
+    DA_ranking = sda.ranking(Xtrain, Ytrain,
+                             verbose=FALSE, diagonal=diagonal, fdr=TRUE)
     ranked_variables = sum(DA_ranking[,"lfdr"]<0.2)
     selected_variables = DA_ranking[,"idx"][1:ranked_variables]
     
     # fit and predict
-    DA_fit = sda(Xtrain[, selected_variables, drop=FALSE], Ytrain, diagonal=diagonal, verbose=FALSE)
-    DA_predict = predict(DA_fit, Xtest[, selected_variables, drop=FALSE], verbose=FALSE)$class 
+    DA_fit = sda(Xtrain[, selected_variables, drop=FALSE],
+                 Ytrain, diagonal=diagonal, verbose=FALSE)
+    DA_predict = predict(DA_fit, Xtest[, selected_variables, drop=FALSE],
+                         verbose=FALSE)$class 
     
     # count false and true positives/negatives
     negative = levels(Ytrain)[1] # negatives or baseline is the good response class
@@ -695,8 +706,8 @@ prediction_function = function(Xtrain, Ytrain, Xtest, Ytest, method)
 # k-fold crossvalidation with B repetitions to evaluate prediction performance
 TPR = rep(0,4)
 TNR = rep(0,4) 
-K=5
-B=20
+K = 5
+B = 20
 ```
 
 ### 4.2.1 - Evaluating prediction performance of DDA cross-validation
@@ -797,8 +808,8 @@ random_forest_prediction = function(train.x, train.y, test.x, test.y, ntree){
 
 # k-fold crossvalidation with B repetitions to evaluate prediction performance
 
-K=5
-B=10 # ideally 100-1000 repetitions
+K = 5
+B = 10 # ideally 100-1000 repetitions
 
 randomforest_cv_nt10 = crossval(random_forest_prediction, x, y, ntree = 10,
                                 K, B, verbose = FALSE)
@@ -815,13 +826,20 @@ randomforest_cv_nt100$stat.se
 
 # Random forest vs regularised regression - prediction performance
 
-table.out = rbind(c(ridge_cvk$stat, ridge_cvk$stat.se), c(lasso_cvk$stat, lasso_cvk$stat.se), 
- c(elasticnet_cvk$stat, elasticnet_cvk$stat.se), c(randomforest_cv_nt10$stat, randomforest_cv_nt10$stat.se), c(randomforest_cv_nt100$stat, randomforest_cv_nt100$stat.se))
-rownames(table.out) = c("ridge", "lasso", "elastic net", "randomforest_cv_nt10", "randomforest_cv_nt100")
-colnames(table.out) = c("mse", "se")
-table.out
+table = rbind(c(ridge_cvk$stat, ridge_cvk$stat.se),
+                  c(lasso_cvk$stat, lasso_cvk$stat.se),
+                  c(elasticnet_cvk$stat, elasticnet_cvk$stat.se),
+                  c(randomforest_cv_nt10$stat, randomforest_cv_nt10$stat.se),
+                  c(randomforest_cv_nt100$stat, randomforest_cv_nt100$stat.se))
 
+rownames(table) = c("ridge",
+                        "lasso",
+                        "elastic net",
+                        "randomforest_cv_nt10",
+                        "randomforest_cv_nt100")
 
+colnames(table) = c("mse", "se")
+table
 
 ```
 
@@ -831,7 +849,185 @@ table.out
 
 
 
+```
+
+## 5.3 - Decision trees and random forests
+
+```{r message = FALSE, warning = FALSE, eval = FALSE}
+titanic = read.csv("E:/Imperial College London/Term 2/AR/Week5/titanic.csv") 
+library(tree)
+
+dim(titanic)
+table(titanic$survived)
+
+x = cbind(titanic$pclass,
+          titanic$sex,
+          titanic$age,
+          titanic$sibsp,
+          titanic$parch)
+
+removed = which(is.na(titanic$age)==TRUE)
+x = x[-removed,]
+
+hist(as.numeric(x[,3]))
+
+colnames(x) = c("pclass", "sex", "age", "sibsp", "parch")
+y = as.factor(titanic$survived[-removed])
+table(y)
+
+tree = tree(y ~ x)
+plot(tree)
+text(tree)
 
 ```
+
+
+Decision trees are prone to over-fitting. This can be prevented by either cross-validation or performing a random forest approach.
+
+```{r message = FALSE, warning = FALSE, eval = FALSE}
+
+tree_cv = cv.tree(tree, FUN=prune.misclass)  #cross-validation
+
+
+tree_pruned = prune.tree(tree, best=5) # pruning tree from best classification
+plot(tree_pruned)
+text(tree_pruned)
+
+```
+# Section 6 
+
+## 6.1 - Parameter tuning and GLMNET
+
+```{r message = FALSE, warning = FALSE, eval = FALSE}
+load("E:/Imperial College London/Term 2/AR/Week5/heart.Rdata") 
+
+x = heart.data$x
+y = as.factor(heart.data$y)
+table(y)
+head(x)
+summary(x)
+
+head(x)
+
+x.mat = model.matrix( ~ ., x)[,-1] # transform data into matrix
+x.mat = as.matrix(x.mat)
+head(x.mat, n=3) # summarise data
+
+
+# cross-validation to tune the regularisation parameter
+lasso_cv = cv.glmnet(x.mat, y, family = "binomial", alpha = 1,
+                     type.measure = "deviance")
+
+```
+
+For categorical or binary variables the mean squared error is not a good measure for model fit.
+
+```{r message = FALSE, warning = FALSE, eval = FALSE}
+
+# lasso model fit
+
+lasso_min = glmnet(x.mat, y, family = "binomial", 
+                   alpha=1, lambda = lasso_cv$lambda.min)
+
+lasso_1se = glmnet(x.mat, y, family = "binomial", 
+                   alpha=1, lambda = lasso_cv$lambda.1se)
+
+sum(abs(lasso_min$beta)>0)
+sum(abs(lasso_1se$beta)>0)
+
+
+# unspecified lasso
+
+lasso_all = glmnet(x.mat, y, family="binomial" ,alpha=1)
+plot(lasso_all, xvar = 'lambda', label=TRUE)
+
+```
+
+## 6.2 - Prediction performance of regularised regression
+
+```{r message = FALSE, warning = FALSE, eval = FALSE}
+
+
+# GLM non-regularised
+
+GLM = glm(y ~ x.mat, family = "binomial")
+eta = predict.glm(GLM, as.data.frame(x.mat)) # needed for inverse logit transform
+GLM_probability =  (exp(eta))/(exp(eta)+1)
+par(mfrow=c(1,2))
+hist(eta) 
+hist(GLM_probability)
+
+# lasso regularised regression
+
+lasso_regression = glmnet(x.mat, y,  family = "binomial", alpha = 0.1, lambda = 0.1)
+eta = predict(lasso_regression, x.mat) # needed for inverse logit transform
+lasso_probability =  (exp(eta))/(exp(eta)+1)
+par(mfrow=c(1,2))
+hist(eta) 
+hist(lasso_probability)
+
+
+# cross-validation to tune regularisation parameter for lasso and ridge
+# to minimise the deviance
+lasso_cv_dev = cv.glmnet(x.mat, y, family="binomial", alpha=1, 
+                     type.measure="deviance")
+ridge_cv_dev = cv.glmnet(x.mat, y, family="binomial", alpha=0, 
+                     type.measure="deviance")
+
+
+prediction_rule = function(train.x, train.y, test.x, test.y, 
+ lambda = lambda, alpha=alpha, threshold = 0.5){
+
+	#fit glmnet prediction rule
+	glmnet.fit = glmnet(x=train.x, y=train.y,family="binomial", lambda = lambda, alpha=alpha) 
+	#predict the new observation based on the test data and the prediction rule
+	eta = predict(glmnet.fit , newx=test.x)
+	p.glmnet = (exp(eta)/(exp(eta)+1)) 
+	y.new = as.factor(ifelse(p.glmnet < threshold, 0,1))
+    # count false and true positives/negatives
+    negative = levels(test.y)[1] 
+    cm = crossval::confusionMatrix(test.y, y.new, negative=negative) 
+    #return confusion matrix
+    return(cm)
+
+}
+
+TPR = rep(0,3)
+TNR = rep(0.3)
+
+#glm
+GLM_cv = crossval(prediction_rule, X=x.mat, Y=y, K=10, B=20, 
+ lambda=0, alpha=0, verbose=FALSE)
+
+GLM_cv$stat
+TPR[1] = GLM_cv$stat[2]/(GLM_cv$stat[2]+GLM_cv$stat[4])
+TNR[1] = GLM_cv$stat[3]/(GLM_cv$stat[1]+GLM_cv$stat[3])
+diagnosticErrors(GLM_cv$stat)
+
+#ridge
+ridge_cv = crossval(prediction_rule, X=x.mat, Y=y, K=10, B=20, 
+ lambda=ridge_cv_dev$lambda.1se, alpha= 0, verbose=FALSE)
+ridge_cv$stat
+TPR[2] = ridge_cv$stat[2]/(ridge_cv$stat[2]+ridge_cv$stat[4])
+TNR[2] = ridge_cv$stat[3]/(ridge_cv$stat[1]+ridge_cv$stat[3])
+diagnosticErrors(ridge_cv$stat)
+
+#lasso
+lasso_cv = crossval(prediction_rule, X=x.mat, Y=y, K=10, B=20, 
+ lambda=lasso_cv_dev$lambda.1se, alpha= 1, verbose=FALSE)
+lasso_cv$stat
+TPR[3] = lasso_cv$stat[2]/(lasso_cv$stat[2]+lasso_cv$stat[4])
+TNR[3] = lasso_cv$stat[3]/(lasso_cv$stat[1]+lasso_cv$stat[3])
+
+diagnosticErrors(lasso_cv$stat)
+
+# final comparison
+TPR
+TNR
+
+
+
+```
+
 
 
